@@ -60,7 +60,7 @@ def process(parameters):
 
     return new_row
 
-def CSV_gen(filename,EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
+def CSV_gen(EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
     # Initial guess for the qubit parameters coupled to two modes
     params = {'E_C': 1.645, # The charging energy of the shunting cap
               'E_L': 2.14, # The inductive energy of the branch inductance
@@ -86,7 +86,7 @@ def CSV_gen(filename,EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
         EJoverEC_sweep = np.linspace(.5,6,15)
         ECJ_sweep = np.sqrt(omega_p**2/(8*EJoverEC_sweep))
         EJ_sweep = np.sqrt(omega_p**2*EJoverEC_sweep/8)
-        ECs_sweep = np.linspace(20,100,5)*1e-3
+        ECs_sweep = np.linspace(20,100,3)*1e-3
 
     elif EJ2_EL_sweep_bool:
         
@@ -96,7 +96,7 @@ def CSV_gen(filename,EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
         ECJ_sweep = [omega_p/np.sqrt(EJoEC)/np.sqrt(8)]
 
         EL_sweep = np.linspace(.7,3,11)
-        ECs_sweep = np.linspace(20,100,5)*1e-3
+        ECs_sweep = np.linspace(20,100,3)*1e-3
 
     else :
         raise ValueError('Sweep not defined')
@@ -105,11 +105,13 @@ def CSV_gen(filename,EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
     all_params = [(eng_l, eng_cs, eng_j, eng_cj, params) for eng_l in EL_sweep
                       for eng_cs in ECs_sweep for eng_j in EJ_sweep for eng_cj in ECJ_sweep]
     
-    with ProcessPoolExecutor() as executor:
-        results = list(tqdm(executor.map(process, all_params), total=len(all_params)))
+    return all_params
+    
+    # with ProcessPoolExecutor() as executor:
+    #     results = list(tqdm(executor.map(process, all_params), total=len(all_params)))
 
-    # Convert results to a DataFrame
-    res = pd.DataFrame(results)
+    # # Convert results to a DataFrame
+    # res = pd.DataFrame(results)
 
-    compression_options = dict(method='zip', archive_name=f'{filename}.csv')
-    res.to_csv(f'{filename}.zip', compression=compression_options, index=False)
+    # compression_options = dict(method='zip', archive_name=f'{filename}.csv')
+    # res.to_csv(f'{filename}.zip', compression=compression_options, index=False)
