@@ -73,7 +73,7 @@ def CSV_gen(filename,EJ_EC_sweep_bool=True,EJ2_EL_sweep_bool = False):
               'n_g' : 0., # Offset charge in the island
               'num_qbt_0': 30,
               'num_qbt_1': 30,
-              'num_qbt_2': 20,
+              'num_qbt_2': 15,
               'num_osc': 30,
               'error_type': 'relative_error',
               'data_set': 'data3'
