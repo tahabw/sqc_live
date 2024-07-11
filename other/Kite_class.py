@@ -425,78 +425,78 @@ class Kite_Transmon_Taha(object):
     def _phi_sum_osc(self):
         """Flux (phase) operator in the oscillator basis for mode sigma"""
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return cp.kron(op, cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(op, sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
     def _phi_sum_osc_square(self):
         """Flux (phase) operator in the oscillator basis for mode sigma"""
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return cp.kron(op**2, cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(op@op, sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
     def _sinphi_sum_osc(self):
         """Flux (phase) operator in the oscillator basis for mode sigma"""
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return cp.kron(he.sinm(op), cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(he.sinm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
     def _cosphi_sum_osc(self):
         """Flux (phase) operator in the oscillator basis for mode sigma"""
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return cp.kron(he.cosm(op), cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(he.cosm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
 
     def _phi_diff_osc(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(op, cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(op, cp.eye(self.num_qbt_mode2)))
     
     def _phi_diff_osc_square(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(op**2, cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(op@op, cp.eye(self.num_qbt_mode2)))
     
     def _cosphi_diff_osc(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(he.cosm(op), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(he.cosm(op), cp.eye(self.num_qbt_mode2)))
     
     def _sinphi_diff_osc(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(he.sinm(op), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(he.sinm(op), cp.eye(self.num_qbt_mode2)))
     
     def _cos_phi_cap_chg(self):
         """cos (operator) in the charge basis for mode phi"""
         off_diag = .5 * cp.ones(self.num_qbt_mode2 - 1)
         op = cp.diag(off_diag, 1) + cp.diag(off_diag, -1)
 
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(cp.eye(self.num_qbt_mode1), op))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(cp.eye(self.num_qbt_mode1), op))
         
     def _sin_phi_cap_chg(self):
         """cos (operator) in the charge basis for mode phi"""
         off_diag = .5j * cp.ones(self._num_qbt_mode2 - 1)
         op = cp.diag(off_diag, 1) - cp.diag(off_diag, -1)
 
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(cp.eye(self.num_qbt_mode1), op))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(cp.eye(self.num_qbt_mode1), op))
     
     # Charge operators and functions of Charge operators
 
     def _n_sum_osc(self):
         """Charge operator in the oscillator basis for mode sigma"""
         op = (self.phi_sigma_zpf)**-1 * he.momentum(self.num_qbt_mode0)
-        return cp.kron(op, cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(op, sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
     def _n_sum_osc_square(self):
         """Charge operator in the oscillator basis for mode sigma"""
         op = (self.phi_sigma_zpf)**-1 * he.momentum(self.num_qbt_mode0)
-        return cp.kron(op**2, cp.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(op@op, sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
     def _n_diff_osc(self):
         """Charge operator in the oscillator basis for mode delta"""
         op = (self.phi_delta_zpf)**-1 * he.momentum(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(op, cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(op, cp.eye(self.num_qbt_mode2)))
     
     def _n_diff_osc_square(self):
         """Charge operator in the oscillator basis for mode delta"""
         op = (self.phi_delta_zpf)**-1 * he.momentum(self.num_qbt_mode1)
-        return cp.kron(cp.eye(self.num_qbt_mode0), cp.kron(op**2, cp.eye(self.num_qbt_mode2)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(op@op, cp.eye(self.num_qbt_mode2)))
 
     def _n_cap_chg(self):
         """Charge operator in the charge basis for mode phi"""
@@ -504,7 +504,7 @@ class Kite_Transmon_Taha(object):
         low = cp.ceil(self.n_g - cp.double(num_chg) / 2.)
         Qc = cp.diag( cp.linspace(low, low + num_chg - 1, num_chg) )
             
-        return cp.kron(Qc,cp.kron(cp.eye(self.fock),cp.eye(self.FOCK)))
+        return sparse.kron(Qc,sparse.kron(cp.eye(self.fock),cp.eye(self.FOCK)))
 
     def _n_coupled_cap(self):
         """Charge operator in the charge basis for mode phi"""
@@ -512,8 +512,8 @@ class Kite_Transmon_Taha(object):
         low = cp.ceil(self.n_g - cp.double(num_chg) / 2.)
         op = cp.diag( cp.linspace(low, low + num_chg - 1, num_chg) )
                      
-        return self._n_sum_osc_square() + 2*cp.kron((self.phi_sigma_zpf)**-1 * he.momentum(self.num_qbt_mode0), cp.kron(cp.eye(self.num_qbt_mode1), (op - self.n_g))) \
-        + cp.kron( cp.eye(self.num_qbt_mode0), cp.kron(cp.eye(self.num_qbt_mode1), (op - self.n_g)**2))
+        return self._n_sum_osc_square() + 2*sparse.kron((self.phi_sigma_zpf)**-1 * he.momentum(self.num_qbt_mode0), sparse.kron(cp.eye(self.num_qbt_mode1), (op - self.n_g))) \
+        + sparse.kron( cp.eye(self.num_qbt_mode0), sparse.kron(cp.eye(self.num_qbt_mode1), (op - self.n_g)@(op - self.n_g)))
 
 
     def _H_osc(self):
@@ -530,9 +530,9 @@ class Kite_Transmon_Taha(object):
 
         if self._eigvals is None or self._eigvecs is None:
             
-            h = sps.csr_matrix(self._H_osc())
+            h = self._H_osc()
             
-            raw_eigvals, raw_eigvecs = sps.linalg.eigs(h, k=self.num_osc, which='SR', return_eigenvectors=True)
+            raw_eigvals, raw_eigvecs = sparse.linalg.eigsh(h, k=self.num_osc, which='SA', return_eigenvectors=True)
             
             real_eigvals = raw_eigvals.real
             sorted_indices = real_eigvals.argsort()
@@ -917,9 +917,9 @@ class Model(object):
         """Eigen-energies and eigenstates in the oscillator basis."""
         if self._eigvals is None or self._eigvecs is None:
             self._eigvals, self._eigvecs = \
-            h = sps.csr_matrix(self._hamiltonian)
+            h = self._hamiltonian
             
-            raw_eigvals, raw_eigvecs = sps.linalg.eigs(h, k=self.num_tot, which='SR', return_eigenvectors=True)
+            raw_eigvals, raw_eigvecs = sparse.linalg.eigsh(h, k=self.num_tot, which='SA', return_eigenvectors=True)
             
             real_eigvals = raw_eigvals.real
             sorted_indices = real_eigvals.argsort()
@@ -1056,10 +1056,10 @@ class Kite_transmon_CoupledToResonator(Model):
             raise ValueError('The number of levels is too high.')
         self._num_tot = num_tot
         
-        H = cp.kron(Kite_Transmon.H(), resonator.eye())
-        H += cp.kron(Kite_Transmon.eye(), resonator.H())
+        H = sparse.kron(Kite_Transmon.H(), resonator.eye())
+        H += sparse.kron(Kite_Transmon.eye(), resonator.H())
         H += (-1.j * params['g_r_J']
-                  * cp.kron(Kite_Transmon.N(),
+                  * sparse.kron(Kite_Transmon.N(),
                               resonator.b() - resonator.b().dag()))
         
        
