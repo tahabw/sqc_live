@@ -55,13 +55,20 @@ def Nzpf(L, C):
     EC = enc(C)
     return 0.5*(0.5*EL/EC)**0.25
 
-# Helpers for sparse operators
+# Helpers for sparse operators operations
 
 def normalize(v):
     norm = cp.linalg.norm(v)
     if norm == 0:
        return v
     return v / norm
+
+def off_diagonal(states,op,ii,jj):
+        psi0 = states[:,ii]
+        psi1 = states[:,jj]
+        return cp.vdot(psi1,cp.dot(op,psi0))
+
+# Helpers for sparse operators construction
 
 def matel(x, i, j):
     """ 

@@ -1,5 +1,4 @@
 import numpy as np
-import qutip as qt
 from scipy.special import eval_hermite as hpoly
 import scipy.sparse as sps
 import Helpers_Erwan as he
@@ -147,10 +146,11 @@ class Kite_Transmon_Erwan(object):
         return self.H
 
 
-    def first_n_states_sparse(self,n_cutoff): 
+    def first_n_states_sparse(self, ng, phiext, n_cutoff): 
         if self.ev is None or self.evec is None:
-            self.ev, self.evec = eigsh(self.Hamiltonian_sparse(), k=n_cutoff, which='SA', return_eigenvectors=True)
+            self.ev, self.evec = eigsh(self.Hamiltonian_sparse(ng, phiext), k=n_cutoff, which='SA', return_eigenvectors=True)
         return self.ev, self.evec
+    
 
 
 class HarmonicOscillator(object):
@@ -737,8 +737,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return self._phi_sum_osc().matrix_element(evecs[level1].dag(),
-                                              evecs[level2])
+        return evecs[level1].transpose()*self._phi_sum_osc()*evecs[level2]
 
     def phi_delta_ij(self, level1, level2):
         """
@@ -757,8 +756,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return self._phi_diff_osc().matrix_element(evecs[level1].dag(),
-                                              evecs[level2])
+        return evecs[level1].transpose()*self._phi_diff_osc()*evecs[level2]
  
 
     def N_ij(self, level1, level2):
@@ -778,8 +776,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return self._n_cap_chg().matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()*self._n_cap_chg()*evecs[level2]
     
     def n_sigma_ij(self, level1, level2):
         """
@@ -818,8 +815,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return self._n_diff_osc().matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()*self._n_diff_osc()*evecs[level2]
     
     def dephasing_op_CC_ij(self, level1, level2):
         """
@@ -840,8 +836,7 @@ class Kite_Transmon_Taha(object):
         evecs = self._spectrum_osc()[1]
         operator = 2 *(self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) * (
                       self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
-        return operator.matrix_element(evecs[level1].dag(),
-                                            evecs[level2])  
+        return evecs[level1].transpose()*operator*evecs[level2]
     
     def dephasing_op_Flux_ij(self, level1, level2):
         """
@@ -862,8 +857,7 @@ class Kite_Transmon_Taha(object):
         evecs = self._spectrum_osc()[1]
         operator = self.E_J * (self._cosphi_diff_osc()*cp.sin(self.phi_ext*cp.pi) + self._sinphi_diff_osc()*cp.cos(self.phi_ext*cp.pi)) *(
             self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
-        return operator.matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()*operator*evecs[level2]
     
     def dephasing_op_Flux_ij_2(self, level1, level2):
         """
@@ -884,8 +878,7 @@ class Kite_Transmon_Taha(object):
         evecs = self._spectrum_osc()[1]
         operator =  .5* self.E_J * (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) * (
                   self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
-        return operator.matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()*operator*evecs[level2]
     
     def dephasing_op_Chg_ij(self, level1, level2):
         """
@@ -905,8 +898,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
         operator = 8 * self.E_C * (self._n_cap_chg + self._n_sum_osc - self.n_g)
-        return operator.matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()*operator*evecs[level2]
 
 class Model(object):
     def _reset_cache(self):
@@ -1063,15 +1055,14 @@ class Kite_transmon_CoupledToResonator(Model):
         if num_tot > osc_tot:
             raise ValueError('The number of levels is too high.')
         self._num_tot = num_tot
-
-        H = (-1.j * params['g_r_J']
+        
+        H = cp.kron(Kite_Transmon.H(), resonator.eye())
+        H += cp.kron(Kite_Transmon.eye(), resonator.H())
+        H += (-1.j * params['g_r_J']
                   * cp.kron(Kite_Transmon.N(),
                               resonator.b() - resonator.b().dag()))
         
-        H += cp.kron(Kite_Transmon.H(), resonator.eye())
-        H += cp.kron(Kite_Transmon.eye(), resonator.H())
-
-        
+       
         self._hamiltonian = (H + H.dag())/2
         self._fluxonium = Kite_Transmon
 
