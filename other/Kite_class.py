@@ -504,7 +504,7 @@ class Kite_Transmon_Taha(object):
         low = cp.ceil(self.n_g - cp.double(num_chg) / 2.)
         Qc = cp.diag( cp.linspace(low, low + num_chg - 1, num_chg) )
             
-        return sparse.kron(Qc,sparse.kron(cp.eye(self.fock),cp.eye(self.FOCK)))
+        return sparse.kron(cp.eye(self.num_qbt_mode0),sparse.kron(cp.eye(self.num_qbt_mode1),Qc))
 
     def _n_coupled_cap(self):
         """Charge operator in the charge basis for mode phi"""
@@ -521,19 +521,19 @@ class Kite_Transmon_Taha(object):
         
         return 4. * self.E_C * self._n_coupled_cap() + 2. * self.E_CJ * (self._n_diff_osc_square() + self._n_sum_osc_square()) + (
                 self.E_L * ( self._phi_sum_osc_square() + self._phi_diff_osc_square() ) - 2 * self.E_J * 
-                (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) * 
-                  (self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) )
+                (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ 
+                  (self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) )
 
 
     def _spectrum_osc(self):
         """Eigen-energies and eigenstates in the oscillator basis."""
 
         if self._eigvals is None or self._eigvecs is None:
-            
+            t0 = time.time()
             h = self._H_osc()
-            
+            t1 = time.time()
             raw_eigvals, raw_eigvecs = sparse.linalg.eigsh(h, k=self.num_osc, which='SA', return_eigenvectors=True)
-            
+            t2 = time.time()
             real_eigvals = raw_eigvals.real
             sorted_indices = real_eigvals.argsort()
             sorted_eigvals = real_eigvals[sorted_indices]
@@ -541,6 +541,8 @@ class Kite_Transmon_Taha(object):
             self._eigvecs = raw_eigvecs[:, sorted_indices]
 
             self._eigvals = sorted_eigvals
+            print('elapsed time H: %s s' % round(t1-t0,2))
+            print('elapsed time diag: %s s' % round(t2-t1,2))
         return self._eigvals, self._eigvecs
 
     def levels(self):
@@ -737,7 +739,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return evecs[level1].transpose()*self._phi_sum_osc()*evecs[level2]
+        return evecs[level1].transpose()@self._phi_sum_osc()@evecs[level2]
 
     def phi_delta_ij(self, level1, level2):
         """
@@ -756,7 +758,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return evecs[level1].transpose()*self._phi_diff_osc()*evecs[level2]
+        return evecs[level1].transpose()@self._phi_diff_osc()@evecs[level2]
  
 
     def N_ij(self, level1, level2):
@@ -776,7 +778,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return evecs[level1].transpose()*self._n_cap_chg()*evecs[level2]
+        return cp.transpose(evecs[level1])@self._n_cap_chg()@evecs[level2]
     
     def n_sigma_ij(self, level1, level2):
         """
@@ -795,8 +797,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return self._n_sum_osc().matrix_element(evecs[level1].dag(),
-                                            evecs[level2])
+        return evecs[level1].transpose()@self._n_sum_osc()@evecs[level2]
     
     def n_delta_ij(self, level1, level2):
         """
@@ -815,7 +816,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        return evecs[level1].transpose()*self._n_diff_osc()*evecs[level2]
+        return evecs[level1].transpose()@self._n_diff_osc()@evecs[level2]
     
     def dephasing_op_CC_ij(self, level1, level2):
         """
@@ -834,9 +835,9 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        operator = 2 *(self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) * (
-                      self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
-        return evecs[level1].transpose()*operator*evecs[level2]
+        operator = 2 *(self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ (
+                      self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
+        return evecs[level1].transpose()@operator@evecs[level2]
     
     def dephasing_op_Flux_ij(self, level1, level2):
         """
@@ -855,8 +856,8 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        operator = self.E_J * (self._cosphi_diff_osc()*cp.sin(self.phi_ext*cp.pi) + self._sinphi_diff_osc()*cp.cos(self.phi_ext*cp.pi)) *(
-            self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
+        operator = self.E_J * (self._cosphi_diff_osc()*cp.sin(self.phi_ext*cp.pi) + self._sinphi_diff_osc()*cp.cos(self.phi_ext*cp.pi)) @(
+            self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
         return evecs[level1].transpose()*operator*evecs[level2]
     
     def dephasing_op_Flux_ij_2(self, level1, level2):
@@ -876,9 +877,9 @@ class Kite_Transmon_Taha(object):
         self._check_level(level1)
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
-        operator =  .5* self.E_J * (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) * (
-                  self._cos_phi_cap_chg()*self._cosphi_sum_osc() + self._sin_phi_cap_chg()*self._sinphi_sum_osc()) 
-        return evecs[level1].transpose()*operator*evecs[level2]
+        operator =  .5* self.E_J * (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ (
+                  self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
+        return evecs[level1].transpose()@operator@evecs[level2]
     
     def dephasing_op_Chg_ij(self, level1, level2):
         """
@@ -898,7 +899,7 @@ class Kite_Transmon_Taha(object):
         self._check_level(level2)
         evecs = self._spectrum_osc()[1]
         operator = 8 * self.E_C * (self._n_cap_chg + self._n_sum_osc - self.n_g)
-        return evecs[level1].transpose()*operator*evecs[level2]
+        return evecs[level1].transpose()@operator@evecs[level2]
 
 class Model(object):
     def _reset_cache(self):
