@@ -421,7 +421,7 @@ class Kite_Transmon_Taha(object):
         self._phi_sigma_op = None
 
 
-    # Phi operators and functions of Phi operators
+    # Phi operators operators
     def _phi_sum_osc(self):
         """Flux (phase) operator in the oscillator basis for mode sigma"""
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
@@ -432,16 +432,6 @@ class Kite_Transmon_Taha(object):
         op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
         return sparse.kron(op@op, sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
     
-    def _sinphi_sum_osc(self):
-        """Flux (phase) operator in the oscillator basis for mode sigma"""
-        op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return sparse.kron(he.sinm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
-    
-    def _cosphi_sum_osc(self):
-        """Flux (phase) operator in the oscillator basis for mode sigma"""
-        op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
-        return sparse.kron(he.cosm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
-
     def _phi_diff_osc(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
@@ -452,6 +442,18 @@ class Kite_Transmon_Taha(object):
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
         return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(op@op, cp.eye(self.num_qbt_mode2)))
     
+    # Trig functions of Phi operators
+    def _sinphi_sum_osc(self):
+        """Flux (phase) operator in the oscillator basis for mode sigma"""
+        op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
+        return sparse.kron(he.sinm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+    
+    def _cosphi_sum_osc(self):
+        """Flux (phase) operator in the oscillator basis for mode sigma"""
+        op = self.phi_sigma_zpf * he.position(self.num_qbt_mode0)
+        return sparse.kron(he.cosm(op), sparse.kron(cp.eye(self.num_qbt_mode1), cp.eye(self.num_qbt_mode2)))
+    
+    
     def _cosphi_diff_osc(self):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
@@ -461,6 +463,7 @@ class Kite_Transmon_Taha(object):
         """Flux (phase) operator in the oscillator basis for mode delta"""
         op = self.phi_delta_zpf * he.position(self.num_qbt_mode1)
         return sparse.kron(cp.eye(self.num_qbt_mode0), sparse.kron(he.sinm(op), cp.eye(self.num_qbt_mode2)))
+    
     
     def _cos_phi_cap_chg(self):
         """cos (operator) in the charge basis for mode phi"""
@@ -518,11 +521,21 @@ class Kite_Transmon_Taha(object):
 
     def _H_osc(self):
         """Qubit Hamiltonian in the oscillator basis."""
+        cos_phi_sum, sin_phi_sum = he.matrices_trig_sparse(self.num_qbt_mode0, self.E_CJ/2, self.E_L*2)
+        cos_phi_diff, sin_phi_diff = he.matrices_trig_sparse(self.num_qbt_mode1, self.E_CJ/2, self.E_L*2)
+        
+        op_cos_phi_sum = sparse.kron(cos_phi_sum,sparse.kron(cp.eye(self.num_qbt_mode1),cp.eye(self.num_qbt_mode2)))
+        op_sin_phi_sum = sparse.kron(sin_phi_sum,sparse.kron(cp.eye(self.num_qbt_mode1),cp.eye(self.num_qbt_mode2)))
+        op_cos_phi_diff = sparse.kron(cp.eye(self.num_qbt_mode0),sparse.kron(cos_phi_diff,cp.eye(self.num_qbt_mode2)))
+        op_sin_phi_diff = sparse.kron(cp.eye(self.num_qbt_mode0),sparse.kron(sin_phi_diff,cp.eye(self.num_qbt_mode2)))
         
         return 4. * self.E_C * self._n_coupled_cap() + 2. * self.E_CJ * (self._n_diff_osc_square() + self._n_sum_osc_square()) + (
                 self.E_L * ( self._phi_sum_osc_square() + self._phi_diff_osc_square() ) - 2 * self.E_J * 
-                (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ 
-                  (self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) )
+                 (op_cos_phi_diff*cp.cos(self.phi_ext*cp.pi) - op_sin_phi_diff*cp.sin(self.phi_ext*cp.pi)) @ 
+                  (self._cos_phi_cap_chg()@op_cos_phi_sum + self._sin_phi_cap_chg()@op_sin_phi_sum) )
+            
+            # (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ 
+                  # (self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) )
 
 
     def _spectrum_osc(self):
@@ -532,6 +545,7 @@ class Kite_Transmon_Taha(object):
             t0 = time.time()
             h = self._H_osc()
             t1 = time.time()
+            print('elapsed time H: %s s' % round(t1-t0,2))
             raw_eigvals, raw_eigvecs = eigsh(h, k=self.num_osc, which='SA', return_eigenvectors=True)
             t2 = time.time()
             real_eigvals = raw_eigvals.real
@@ -541,7 +555,6 @@ class Kite_Transmon_Taha(object):
             self._eigvecs = raw_eigvecs[:, sorted_indices]
             self._eigvals = sorted_eigvals
 
-            print('elapsed time H: %s s' % round(t1-t0,2))
             print('elapsed time diag: %s s' % round(t2-t1,2))
         return self._eigvals, self._eigvecs
 
@@ -755,8 +768,10 @@ class Kite_Transmon_Taha(object):
         complex
             Matrix element of the flux operator.
         """
+        
         self._check_level(level1)
         self._check_level(level2)
+        
         evecs = self._spectrum_osc()[1]
         return evecs[:,level1].transpose().conj()@self._phi_diff_osc()@evecs[:,level2]
  
@@ -796,6 +811,7 @@ class Kite_Transmon_Taha(object):
         """
         self._check_level(level1)
         self._check_level(level2)
+        
         evecs = self._spectrum_osc()[1]
         return evecs[:,level1].transpose().conj()@self._n_sum_osc()@evecs[:,level2]
     
@@ -818,88 +834,7 @@ class Kite_Transmon_Taha(object):
         evecs = self._spectrum_osc()[1]
         return evecs[:,level1].transpose().conj()@self._n_diff_osc()@evecs[:,level2]
     
-    def dephasing_op_CC_ij(self, level1, level2):
-        """
-        Charge matrix element between two eigenstates.
-
-        Parameters
-        ----------
-        level1, level2 : int
-            Qubit levels.
-
-        Returns
-        -------
-        complex
-            Matrix element of the charge operator.
-        """
-        self._check_level(level1)
-        self._check_level(level2)
-        evecs = self._spectrum_osc()[1]
-        operator = 2 *(self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ (
-                      self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
-        return evecs[:,level1].transpose()@operator@evecs[:,level2]
     
-    def dephasing_op_Flux_ij(self, level1, level2):
-        """
-        Charge matrix element between two eigenstates.
-
-        Parameters
-        ----------
-        level1, level2 : int
-            Qubit levels.
-
-        Returns
-        -------
-        complex
-            Matrix element of the charge operator.
-        """
-        self._check_level(level1)
-        self._check_level(level2)
-        evecs = self._spectrum_osc()[1]
-        operator = self.E_J * (self._cosphi_diff_osc()*cp.sin(self.phi_ext*cp.pi) + self._sinphi_diff_osc()*cp.cos(self.phi_ext*cp.pi)) @(
-            self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
-        return evecs[:,level1].transpose()*operator*evecs[:,level2]
-    
-    def dephasing_op_Flux_ij_2(self, level1, level2):
-        """
-        Charge matrix element between two eigenstates.
-
-        Parameters
-        ----------
-        level1, level2 : int
-            Qubit levels.
-
-        Returns
-        -------
-        complex
-            Matrix element of the charge operator.
-        """
-        self._check_level(level1)
-        self._check_level(level2)
-        evecs = self._spectrum_osc()[1]
-        operator =  .5* self.E_J * (self._cosphi_diff_osc()*cp.cos(self.phi_ext*cp.pi) - self._sinphi_diff_osc()*cp.sin(self.phi_ext*cp.pi)) @ (
-                  self._cos_phi_cap_chg()@self._cosphi_sum_osc() + self._sin_phi_cap_chg()@self._sinphi_sum_osc()) 
-        return evecs[:,level1].transpose()@operator@evecs[:,level2]
-    
-    def dephasing_op_Chg_ij(self, level1, level2):
-        """
-        Charge matrix element between two eigenstates.
-
-        Parameters
-        ----------
-        level1, level2 : int
-            Qubit levels.
-
-        Returns
-        -------
-        complex
-            Matrix element of the charge operator.
-        """
-        self._check_level(level1)
-        self._check_level(level2)
-        evecs = self._spectrum_osc()[1]
-        operator = 8 * self.E_C * (self._n_cap_chg + self._n_sum_osc - self.n_g)
-        return evecs[:,level1].transpose()@operator@evecs[:,level2]
 
 class Model(object):
     def _reset_cache(self):
